@@ -16,6 +16,8 @@ const BROWSER_FUNCTIONS = [
   'student_list_challenges', 'student_challenge_detail', 'student_register', 'student_start_attempt',
   'student_get_attempt', 'student_save_answer', 'student_submit_attempt', 'student_get_result',
   'student_my_attempts', 'student_leaderboard',
+  // Phase 3: bilingual
+  'admin_save_translation', 'admin_approve_translation',
 ]
 
 describe('schema and API exposure', () => {
