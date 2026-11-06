@@ -76,6 +76,7 @@ interface FormState {
   shuffleQuestions: boolean
   shuffleOptions: boolean
   resultRelease: 'IMMEDIATE' | 'AFTER_CLOSE' | 'NEVER'
+  tamil: boolean
 }
 
 interface Item {
@@ -107,6 +108,7 @@ function initialForm(d: AdminChallengeDetail | null): FormState {
     shuffleQuestions: c?.shuffle_questions ?? false,
     shuffleOptions: c?.shuffle_options ?? false,
     resultRelease: c?.result_release ?? 'IMMEDIATE',
+    tamil: c?.languages.includes('ta') ?? false,
   }
 }
 
@@ -196,6 +198,7 @@ function EditorSession({ detail }: { detail: AdminChallengeDetail | null }) {
   const selectedIds = new Set(items.map((i) => i.question_version_id))
   const pointsDefault = Number(form.pointsPerCorrect) || 1
   const target = Number(form.targetCount) || 0
+  const tamilReady = (detail?.questions ?? []).filter((q) => q.tamil_ready && items.some((i) => i.question_version_id === q.question_version_id)).length
 
   return (
     <div className="space-y-8">
@@ -275,6 +278,7 @@ function EditorSession({ detail }: { detail: AdminChallengeDetail | null }) {
               <label className="flex items-center gap-2"><input type="checkbox" className="size-4 accent-brand" checked={form.negative} onChange={(e) => set('negative', e.target.checked)} />Negative marking for wrong answers</label>
               {form.negative ? <Field label="Penalty per wrong answer" type="number" min={0.01} step="0.01" value={form.penalty} error={errors.penalty} onChange={(e) => set('penalty', e.target.value)} /> : null}
               <label className="flex items-center gap-2"><input type="checkbox" className="size-4 accent-brand" checked={form.shuffleQuestions} onChange={(e) => set('shuffleQuestions', e.target.checked)} />Shuffle question order for each student</label>
+              <label className="flex items-center gap-2"><input type="checkbox" className="size-4 accent-brand" checked={form.tamil} onChange={(e) => set('tamil', e.target.checked)} />Also offer this challenge in Tamil (English is always offered)</label>
               <label className="flex items-center gap-2"><input type="checkbox" className="size-4 accent-brand" checked={form.shuffleOptions} onChange={(e) => set('shuffleOptions', e.target.checked)} />Shuffle answer options for each student</label>
             </div>
           </fieldset>
@@ -295,6 +299,7 @@ function EditorSession({ detail }: { detail: AdminChallengeDetail | null }) {
             <Check ok={!!form.startLocal && !!form.endLocal} label="Schedule set" />
             <Check ok={items.length === target && target > 0} label={`${items.length} of ${target} questions added`} />
             <Check ok={items.every((i) => i.review_status === 'ADMIN_APPROVED')} label="Every question approved" />
+            {form.tamil ? <Check ok={tamilReady === items.length && items.length > 0} label={`Tamil ready: ${tamilReady} of ${items.length} questions`} /> : null}
           </ul>
           <p className="text-sm text-ink-muted">Total marks: {formatMarks(totalMarks(items.map((i) => ({ marks: i.marks.trim() ? Number(i.marks) : null })), pointsDefault))}</p>
           {detail?.challenge.status === 'DRAFT' || !detail ? (
@@ -491,6 +496,7 @@ function payload(f: FormState): Record<string, unknown> {
     shuffle_questions: f.shuffleQuestions,
     shuffle_options: f.shuffleOptions,
     result_release: f.resultRelease,
+    languages: f.tamil ? ['en', 'ta'] : ['en'],
   }
 }
 

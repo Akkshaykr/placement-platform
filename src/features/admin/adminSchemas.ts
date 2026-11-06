@@ -51,6 +51,7 @@ export const adminChallengeDetailSchema = z.object({
     shuffle_questions: z.boolean(),
     shuffle_options: z.boolean(),
     result_release: z.enum(['IMMEDIATE', 'AFTER_CLOSE', 'NEVER']),
+    languages: z.array(z.string()).default(['en']),
     registrations: z.number(),
     attempts: z.number(),
   }),
@@ -66,6 +67,7 @@ export const adminChallengeDetailSchema = z.object({
       difficulty: z.string(),
       review_status: z.string(),
       topic_name: z.string().nullable(),
+      tamil_ready: z.boolean().default(false),
     }),
   ),
 })
