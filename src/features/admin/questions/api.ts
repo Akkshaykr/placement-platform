@@ -50,6 +50,27 @@ export const saveQuestion = (id: string | null, data: QuestionInput) =>
 export const approveQuestion = (questionVersionId: string) =>
   call('admin_approve_question', { p_question_version_id: questionVersionId, p_confirm: true }, z.unknown())
 
+export interface TranslationInput {
+  stem: string
+  subtopic: string
+  explanation: string
+  options: string[]
+}
+
+export const saveTranslation = (questionVersionId: string, data: TranslationInput) =>
+  call(
+    'admin_save_translation',
+    { p_question_version_id: questionVersionId, p_language: 'ta', p_data: { ...data, source: 'HUMAN' } },
+    z.object({ status: z.string() }),
+  )
+
+export const approveTranslation = (questionVersionId: string, approve: boolean) =>
+    call(
+    'admin_approve_translation',
+    { p_question_version_id: questionVersionId, p_language: 'ta', p_approve: approve },
+    z.object({ status: z.string() }),
+  )
+
 export const deleteQuestion = (id: string) => call('admin_delete_question', { p_question_id: id }, z.unknown())
 
 export const aiStatus = () => call('admin_ai_status', {}, aiStatusSchema)

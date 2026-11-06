@@ -108,6 +108,18 @@ export const questionDetailSchema = z.object({
   correct_option_id: z.string().nullable(),
   explanation: z.string().nullable(),
   checks: z.array(checkSchema),
+  tamil: z
+    .object({
+      status: z.string(),
+      source: z.string(),
+      stem: z.string(),
+      subtopic: z.string().nullable(),
+      explanation: z.string(),
+      reviewed_at: z.string().nullable(),
+      options: z.array(z.string()),
+    })
+    .nullable()
+    .default(null),
 })
 export type QuestionDetail = z.infer<typeof questionDetailSchema>
 

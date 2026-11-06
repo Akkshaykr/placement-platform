@@ -14,6 +14,7 @@ import { useTopics } from '@/features/admin/useTopics'
 import { TopicOptions } from '@/features/admin/TopicOptions'
 import type { Check, QuestionDetail } from '@/features/admin/adminSchemas'
 import { approveQuestion, getQuestion, saveQuestion } from './api'
+import { TamilTranslationCard } from './TamilTranslationCard'
 import { cn } from '@/lib/cn'
 
 const CHECK_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { PASS: 'success', WARN: 'warning', FAIL: 'danger', SKIPPED: 'neutral' }
@@ -230,6 +231,10 @@ function QuestionSession({ detail }: { detail: QuestionDetail | null }) {
           ) : null}
         </aside>
       </div>
+
+      {detail && detail.review_status === 'ADMIN_APPROVED' ? (
+        <TamilTranslationCard key={detail.question_version_id} detail={detail} />
+      ) : null}
     </div>
   )
 }
