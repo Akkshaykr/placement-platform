@@ -36,7 +36,12 @@ begin
     raise exception 'VALIDATION: Options must be provided as a list.' using errcode = '22023';
   end if;
 
-  v_bodies := array(select jsonb_array_elements_text(p_data -> 'options'));
+  v_bodies := array(
+    select item.value
+    from jsonb_array_elements_text(p_data -> 'options')
+      with ordinality as item(value, ord)
+    order by item.ord
+  );
   v_option_ids := array(
     select o.id from public.question_options o
     where o.question_version_id = p_question_version_id
