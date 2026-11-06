@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+﻿import { screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithProviders } from '../../tests/unit/utils'
 import { AuthContext, type AuthContextValue } from '@/features/auth/authContext'
@@ -25,7 +25,7 @@ beforeEach(() => vi.resetAllMocks())
 describe('LandingPage', () => {
   it('invites visitors to register or sign in, and labels the specimen as an example', () => {
     renderWithProviders(withAuth(<LandingPage />, { status: 'unauthenticated' }))
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/timed aptitude challenges/i)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Vanakkam Students Apttitude Challenge ku Readya ???')
     expect(screen.getByRole('link', { name: /create account/i })).toHaveAttribute('href', '/register')
     expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute('href', '/login')
     expect(screen.getByText(/not a real challenge/i)).toBeInTheDocument()
