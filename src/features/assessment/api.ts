@@ -31,8 +31,8 @@ export const challengeDetail = (slug: string) => call('student_challenge_detail'
 export const registerForChallenge = (challengeId: string) =>
   call('student_register', { p_challenge_id: challengeId }, z.object({ registered: z.boolean() }))
 
-export const startAttempt = (challengeId: string) =>
-  call('student_start_attempt', { p_challenge_id: challengeId }, attemptStateSchema)
+export const startAttempt = (challengeId: string, language: 'en' | 'ta' = 'en') =>
+  call('student_start_attempt', { p_challenge_id: challengeId, p_language: language }, attemptStateSchema)
 
 export const getAttempt = (attemptId: string) => call('student_get_attempt', { p_attempt_id: attemptId }, attemptStateSchema)
 

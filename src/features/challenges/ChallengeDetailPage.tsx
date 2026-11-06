@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import { Alert } from '@/components/ui/Alert'
@@ -13,6 +14,7 @@ export function ChallengeDetailPage() {
   const { slug = '' } = useParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const [language, setLanguage] = useState<'en' | 'ta'>('en')
   const query = useQuery({ queryKey: ['challenge', slug], queryFn: () => challengeDetail(slug), retry: false })
 
   const refresh = () => {
@@ -22,7 +24,7 @@ export function ChallengeDetailPage() {
 
   const register = useMutation({ mutationFn: (id: string) => registerForChallenge(id), onSuccess: refresh })
   const start = useMutation({
-    mutationFn: (id: string) => startAttempt(id),
+    mutationFn: (id: string) => startAttempt(id, language),
     onSuccess: (attempt) => navigate(`/attempt/${attempt.attempt_id}`),
     onError: refresh,
   })
@@ -97,6 +99,19 @@ export function ChallengeDetailPage() {
           {c.is_full && !c.is_registered ? <p className="text-sm text-warning">This challenge has reached its participant limit.</p> : null}
           {attemptsUsed ? <p className="text-sm text-ink-muted">You have used all your attempts for this challenge.</p> : null}
 
+          {canStart && !canResume && c.languages.includes('ta') && c.tamil_ready ? (
+            <div role="group" aria-label="Language" className="space-y-2">
+              <p className="text-sm text-ink-muted">Choose your language</p>
+              <div className="flex gap-2">
+                <Button type="button" variant={language === 'en' ? 'primary' : 'secondary'} aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>
+                  English
+                </Button>
+                <Button type="button" variant={language === 'ta' ? 'primary' : 'secondary'} aria-pressed={language === 'ta'} onClick={() => setLanguage('ta')}>
+                  தமிழ்
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-3">
             {canResume ? (
               <Button size="lg" onClick={() => navigate(`/attempt/${c.running_attempt_id}`)}>

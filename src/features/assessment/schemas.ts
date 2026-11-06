@@ -56,6 +56,8 @@ export const challengeSchema = z.object({
   shuffle_questions: z.boolean(),
   shuffle_options: z.boolean(),
   result_release: releasePolicySchema,
+  languages: z.array(z.string()).default(['en']),
+  tamil_ready: z.boolean().default(false),
   attempts: z.array(attemptSummarySchema).optional(),
 })
 export type Challenge = z.infer<typeof challengeSchema>
@@ -66,6 +68,7 @@ export const attemptStateSchema = z.object({
   attempt_id: uuid,
   challenge_id: uuid,
   challenge_title: z.string(),
+  language: z.string().default('en'),
   status: z.enum(['IN_PROGRESS', 'SUBMITTED']),
   started_at: iso,
   deadline_at: iso,
@@ -104,6 +107,7 @@ export const resultSchema = z.object({
   status: z.string(),
   released: z.boolean().optional(),
   release_policy: releasePolicySchema.optional(),
+  language: z.string().optional(),
   challenge: z
     .object({ id: uuid, slug: z.string(), title: z.string(), state: challengeStateSchema })
     .optional(),
