@@ -13,7 +13,7 @@ export function AuthLayout() {
         <img
           src="/images/kanithamedhai-login-visual.png"
           alt={`${APP_NAME}: timed aptitude practice`}
-          className="mx-auto max-h-[70svh] w-auto max-w-full rounded-panel object-contain"
+          className="mx-auto max-h-[55svh] w-auto max-w-full rounded-panel object-contain"
         />
         <p className="text-sm text-ink-muted">Create an account to attempt published challenges.</p>
       </aside>

@@ -70,16 +70,16 @@ function QuizSpecimen() {
 
 const PRINCIPLES = [
   {
-    title: 'Drafts stay private',
-    body: 'A challenge is visible to students only while it is published and inside its schedule. Everything else is hidden by the database itself.',
+    title: 'Practise under real exam conditions',
+    body: 'Timed challenges with a fixed time limit, the same way a placement test works. The clock is kept on the server, so it stays accurate.',
   },
   {
-    title: 'Answers stay out of reach',
-    body: 'Correct answers and explanations are stored where the browser cannot query them, so they cannot be read from the page or the network.',
+    title: 'Learn from every answer',
+    body: 'After you submit, see the correct answer and a clear explanation, once the administrator releases them for that challenge.',
   },
   {
-    title: 'History does not change',
-    body: 'Editing a challenge later never alters the questions behind your past results. Each attempt keeps the exact version you took.',
+    title: 'Track your progress by topic',
+    body: 'Your accuracy in each area, such as quantitative aptitude or logical reasoning, shows where to focus next.',
   },
 ]
 
