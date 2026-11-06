@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+﻿import { useQuery } from '@tanstack/react-query'
 import { Card } from '@/components/ui/Card'
 import { StatCard } from '@/components/StatCard'
+import { Reveal } from '@/components/fx/Reveal'
 import { useAuth } from '@/features/auth/useAuth'
 import { countCompletedAttempts, countOpenChallenges } from './api'
 
@@ -11,12 +12,12 @@ export function StudentDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <Reveal>
         <h1 className="text-2xl font-semibold sm:text-3xl">Welcome{profile ? `, ${profile.display_name}` : ''}</h1>
         <p className="mt-2 text-ink-muted">Your practice at a glance.</p>
-      </div>
+      </Reveal>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <Reveal delayMs={80} className="grid gap-4 sm:grid-cols-2">
         <StatCard
           label="Open challenges"
           value={open.data}
@@ -31,13 +32,15 @@ export function StudentDashboardPage() {
           error={completed.isError}
           definition="Your own attempts that were submitted, or ended automatically when time ran out."
         />
-      </div>
+      </Reveal>
 
       {completed.data === 0 ? (
-        <Card className="p-6">
-          <h2 className="font-medium">You haven’t completed an attempt yet</h2>
-          <p className="mt-2 text-sm text-ink-muted">Your scores, accuracy and history will appear here after your first attempt.</p>
-        </Card>
+        <Reveal delayMs={160}>
+          <Card className="p-6" interactive>
+            <h2 className="font-medium">You haven’t completed an attempt yet</h2>
+            <p className="mt-2 text-sm text-ink-muted">Your scores, accuracy and history will appear here after your first attempt.</p>
+          </Card>
+        </Reveal>
       ) : null}
     </div>
   )

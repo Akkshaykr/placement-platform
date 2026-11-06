@@ -1,5 +1,10 @@
-import { Link } from 'react-router'
+﻿import { Link } from 'react-router'
 import { buttonStyles } from '@/components/ui/buttonStyles'
+import { SpotlightLayer } from '@/components/fx/SpotlightLayer'
+import { Reveal } from '@/components/fx/Reveal'
+import { useReveal } from '@/components/fx/useReveal'
+import { NeuralBackground } from '@/components/fx/NeuralBackground'
+import { FloatingSymbols } from '@/components/fx/FloatingSymbols'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/features/auth/useAuth'
 
@@ -16,7 +21,7 @@ const paletteStyle: Record<PaletteState, string> = {
 
 function QuizSpecimen() {
   return (
-    <figure className="w-full">
+    <figure className="mx-auto w-full max-w-md">
       <div className="overflow-hidden rounded-panel border border-line bg-surface shadow-2xl shadow-black/30">
         <div className="signal-rule" aria-hidden="true" />
         <div className="space-y-5 p-5 sm:p-6">
@@ -78,53 +83,73 @@ const PRINCIPLES = [
   },
 ]
 
+/** One principle. It fades in on its own when it scrolls into view. */
+function PrincipleItem({ title, body, delayMs }: { title: string; body: string; delayMs: number }) {
+  const ref = useReveal<HTMLDivElement>()
+  return (
+    <div ref={ref} style={{ transitionDelay: `${delayMs}ms` }}>
+      <dt className="font-medium">{title}</dt>
+      <dd className="mt-2 text-sm text-ink-muted">{body}</dd>
+    </div>
+  )
+}
+
 export function LandingPage() {
   const { status } = useAuth()
   const signedIn = status === 'authenticated'
   return (
-    <>
-      <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:py-20">
-        <div>
-          <div className="signal-rule mb-6 w-16" aria-hidden="true" />
-          <h1 className="text-(length:--text-display) leading-[1.08] font-semibold">Timed aptitude challenges, reviewed before you see them.</h1>
-          <p className="mt-5 max-w-xl text-lg text-ink-muted">
-            Practise placement aptitude under exam-style time limits. Sign in to attempt published challenges, read the explanations after you submit, and track your accuracy by topic.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            {signedIn ? (
-              <Link to="/dashboard" className={buttonStyles('primary', 'lg')}>
-                Go to your dashboard
-              </Link>
-            ) : (
-              <>
-                <Link to="/register" className={buttonStyles('primary', 'lg')}>
-                  Create account
-                </Link>
-                <Link to="/login" className={buttonStyles('secondary', 'lg')}>
-                  Sign in
-                </Link>
-              </>
-            )}
+    <div className="relative isolate overflow-hidden">
+      {/* Decorative layers: behind all content, ignored by the pointer and by assistive technology. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+        <NeuralBackground />
+        <FloatingSymbols />
+      </div>
+
+      <section>
+        <SpotlightLayer className="mx-auto w-full max-w-6xl">
+          <div className="grid items-center gap-12 px-4 py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:py-20">
+            <div>
+              <div className="signal-rule mb-6 w-16" aria-hidden="true" />
+              <h1 className="text-(length:--text-display) leading-[1.08] font-semibold">Vanakkam Students  Apttitude Challenge ku  Readya ???</h1>
+              <p className="mt-5 max-w-xl text-lg text-ink-muted">
+                Practise placement aptitude under exam-style time limits. Sign in to attempt published challenges, read the explanations after you submit, and track your accuracy by topic.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                {signedIn ? (
+                  <Link to="/dashboard" className={buttonStyles('primary', 'lg')}>
+                    Go to your dashboard
+                  </Link>
+                ) : (
+                  <>
+                    <Link to="/register" className={buttonStyles('primary', 'lg')}>
+                      Create account
+                    </Link>
+                    <Link to="/login" className={buttonStyles('secondary', 'lg')}>
+                      Sign in
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+            <QuizSpecimen />
           </div>
-        </div>
-        <QuizSpecimen />
+        </SpotlightLayer>
       </section>
 
-      <section aria-labelledby="principles" className="border-t border-line bg-surface">
+      <section aria-labelledby="principles" className="border-t border-line bg-surface/80">
         <div className="mx-auto w-full max-w-6xl px-4 py-14">
-          <h2 id="principles" className="text-2xl font-semibold">
-            Built so results stay trustworthy
-          </h2>
+          <Reveal>
+            <h2 id="principles" className="text-2xl font-semibold">
+              Built so results stay trustworthy
+            </h2>
+          </Reveal>
           <dl className="mt-8 grid gap-8 md:grid-cols-3">
-            {PRINCIPLES.map((p) => (
-              <div key={p.title}>
-                <dt className="font-medium">{p.title}</dt>
-                <dd className="mt-2 text-sm text-ink-muted">{p.body}</dd>
-              </div>
+            {PRINCIPLES.map((p, i) => (
+              <PrincipleItem key={p.title} title={p.title} body={p.body} delayMs={i * 120} />
             ))}
           </dl>
         </div>
       </section>
-    </>
+    </div>
   )
 }

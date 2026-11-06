@@ -1,5 +1,6 @@
-@import 'tailwindcss';
+﻿@import 'tailwindcss';
 @import '@fontsource-variable/geist';
+@import './styles/fx.css';
 
 /*
  * Design tokens. This file is the single source of truth for colour: tests/unit/tokens.test.ts
@@ -79,6 +80,7 @@
   }
 }
 
+/* Users who ask for less motion get instant transitions. This also stops JavaScript-free animations. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

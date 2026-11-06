@@ -1,0 +1,95 @@
+﻿/* Visual effects. Decorative only. Every effect has a reduced-motion or no-JavaScript fallback. */
+
+@keyframes fx-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, -2%, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes fx-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translate3d(var(--fx-dx), var(--fx-dy), 0) rotate(8deg);
+    opacity: 0.22;
+  }
+}
+
+@layer components {
+  /* Animated gradient background blobs (auth pages). */
+  .fx-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px);
+    opacity: 0.3;
+    will-change: transform;
+    animation: fx-drift 22s ease-in-out infinite;
+  }
+
+  /* Floating aptitude symbols on the homepage. Duration and delay are set inline per symbol. */
+  .fx-symbol {
+    position: absolute;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-brand-soft);
+    text-shadow: 0 0 18px rgb(96 165 250 / 0.5);
+    pointer-events: none;
+    user-select: none;
+    animation-name: fx-float;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+
+  /* Mouse-following spotlight. --fx-x and --fx-y are set by SpotlightLayer. */
+  .fx-spotlight {
+    background: radial-gradient(420px circle at var(--fx-x, 50%) var(--fx-y, 50%), rgb(96 165 250 / 0.14), transparent 60%);
+    opacity: 0;
+    transition: opacity 300ms ease-out;
+  }
+  .fx-spotlight-on {
+    opacity: 1;
+  }
+
+  /* Scroll reveal. Only armed by JavaScript when observation is possible, so content stays visible otherwise. */
+  .fx-reveal-armed {
+    transition: opacity 600ms ease-out, transform 600ms ease-out;
+  }
+  .fx-reveal-armed:not(.fx-reveal-in) {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+}
+
+@layer utilities {
+  /* Glassmorphism. Falls back to a solid surface where backdrop blur is unsupported. */
+  .fx-glass {
+    background: rgb(17 28 46 / 0.6);
+    border: 1px solid rgb(38 55 84 / 0.75);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .fx-glass {
+      background: #111c2e;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-blob,
+  .fx-symbol {
+    animation: none;
+  }
+  .fx-symbol {
+    opacity: 0.15;
+  }
+}

@@ -12,7 +12,6 @@ const mocked = vi.mocked(api)
 
 beforeEach(() => {
   vi.resetAllMocks()
-  mocked.signInWithGoogle.mockResolvedValue({ ok: true, value: undefined })
 })
 
 describe('LoginPage', () => {
@@ -55,10 +54,9 @@ describe('LoginPage', () => {
     expect(mocked.resendConfirmation).toHaveBeenCalledWith('ada@example.test')
   })
 
-  it('starts Google sign-in from the Google button', async () => {
+  it('does not offer any third-party sign-in option', () => {
     renderWithProviders(<LoginPage />)
-    await userEvent.click(screen.getByRole('button', { name: /continue with google/i }))
-    expect(mocked.signInWithGoogle).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: /google/i })).not.toBeInTheDocument()
   })
 })
 
@@ -93,6 +91,11 @@ describe('RegisterPage', () => {
     renderWithProviders(<RegisterPage />)
     await fill()
     expect(await screen.findByRole('alert')).toHaveTextContent(/too many attempts/i)
+  })
+
+  it('does not offer any third-party sign-up option', () => {
+    renderWithProviders(<RegisterPage />)
+    expect(screen.queryByRole('button', { name: /google/i })).not.toBeInTheDocument()
   })
 })
 

@@ -6,9 +6,7 @@ import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { useToast } from '@/components/ui/Toast'
-import { safeNextPath } from '@/lib/safeRedirect'
 import { resendConfirmation, signUpWithEmail } from './api'
-import { GoogleButton } from './GoogleButton'
 import { rememberNextPath } from './nextPath'
 import { PASSWORD_MIN, registerSchema, type RegisterValues } from './schemas'
 
@@ -67,34 +65,25 @@ export function RegisterPage() {
   return (
     <div>
       <h1 className="text-2xl font-semibold">Create your account</h1>
-      <p className="mt-2 text-sm text-ink-muted">Use your email address or continue with Google.</p>
+      <p className="mt-2 text-sm text-ink-muted">Enter your details to get started.</p>
 
-      <div className="mt-8 space-y-4">
-        <GoogleButton next={safeNextPath(next)} onError={setFormError} />
-        <div className="flex items-center gap-3 text-xs text-ink-muted" aria-hidden="true">
-          <span className="h-px flex-1 bg-line" />
-          or
-          <span className="h-px flex-1 bg-line" />
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-          {formError ? <Alert tone="danger">{formError}</Alert> : null}
-          <Field label="Full name" autoComplete="name" error={errors.displayName?.message} {...register('displayName')} />
-          <Field label="Email" type="email" autoComplete="email" inputMode="email" error={errors.email?.message} {...register('email')} />
-          <Field
-            label="Password"
-            type="password"
-            autoComplete="new-password"
-            hint={`At least ${PASSWORD_MIN} characters.`}
-            error={errors.password?.message}
-            {...register('password')}
-          />
-          <Field label="Confirm password" type="password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register('confirmPassword')} />
-          <Button type="submit" className="w-full" loading={isSubmitting}>
-            Create account
-          </Button>
-        </form>
-      </div>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-8 space-y-4">
+        {formError ? <Alert tone="danger">{formError}</Alert> : null}
+        <Field label="Full name" autoComplete="name" error={errors.displayName?.message} {...register('displayName')} />
+        <Field label="Email" type="email" autoComplete="email" inputMode="email" error={errors.email?.message} {...register('email')} />
+        <Field
+          label="Password"
+          type="password"
+          autoComplete="new-password"
+          hint={`At least ${PASSWORD_MIN} characters.`}
+          error={errors.password?.message}
+          {...register('password')}
+        />
+        <Field label="Confirm password" type="password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register('confirmPassword')} />
+        <Button type="submit" className="w-full" loading={isSubmitting}>
+          Create account
+        </Button>
+      </form>
 
       <p className="mt-6 text-sm text-ink-muted">
         Already registered?{' '}

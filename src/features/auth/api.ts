@@ -41,16 +41,6 @@ export function signInWithEmail(email: string, password: string): Promise<Result
   })
 }
 
-export function signInWithGoogle(): Promise<Result> {
-  return run(async () => {
-    const { error } = await getSupabase().auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${getSiteUrl()}/auth/callback` },
-    })
-    if (error) throw error
-  })
-}
-
 export function resendConfirmation(email: string): Promise<Result> {
   return run(async () => {
     const { error } = await getSupabase().auth.resend({

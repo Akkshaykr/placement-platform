@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router'
+﻿import { NavLink, Outlet, useNavigate } from 'react-router'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Brand } from '@/components/ui/Brand'
@@ -19,7 +19,7 @@ interface AppShellProps {
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'rounded-control px-3 py-2 text-sm font-medium transition-colors',
+    'rounded-control px-3 py-2 text-sm font-medium transition-colors duration-200',
     isActive ? 'bg-raised text-ink' : 'text-ink-muted hover:text-ink',
   )
 
@@ -43,7 +43,8 @@ export function AppShell({ nav, variant }: AppShellProps) {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <header className="border-b border-line bg-surface">
+      {/* Student header is glass. The administrator header stays solid so admin screens remain easy to scan. */}
+      <header className={cn('border-b border-line', variant === 'student' ? 'fx-glass' : 'bg-surface')}>
         <div className={cn('h-0.5', variant === 'admin' ? 'bg-danger' : 'bg-brand')} aria-hidden="true" />
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <div className="flex items-center gap-3">

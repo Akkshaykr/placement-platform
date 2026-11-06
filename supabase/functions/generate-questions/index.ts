@@ -20,8 +20,13 @@ import {
   type GeneratedQuestion,
 } from '../_shared/questionSchema.ts'
 
-const DEFAULT_MODEL = 'gemini-2.5-flash'
-const MODEL_TIMEOUT_MS = 45_000
+// Models are tried in order. Override with the GEMINI_MODELS secret (comma-separated).
+const DEFAULT_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite']
+// Each attempt gets its own time limit, so a slow model fails fast and the next one is tried.
+const ATTEMPT_TIMEOUT_MS = 25_000
+const MAX_ATTEMPTS_PER_MODEL = 2
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 const DEV_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173']
 
@@ -65,12 +70,6 @@ function fromDb(message: string): { status: number; code: string; message: strin
   return { status: map[m[1]!] ?? 409, code: m[1]!, message: m[2]!.trim() }
 }
 
-interface GeminiCall {
-  text: string
-  inputTokens: number
-  outputTokens: number
-}
-
 class ProviderError extends Error {
   constructor(
     public status: number,
@@ -80,46 +79,80 @@ class ProviderError extends Error {
   }
 }
 
-async function callGemini(
-  apiKey: string,
-  model: string,
-  prompt: string,
-  responseSchema: unknown,
-): Promise<GeminiCall> {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json', responseSchema, temperature: 0.4 },
-    }),
-    signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
-  })
+function modelList(): string[] {
+  const raw = Deno.env.get('GEMINI_MODELS') || Deno.env.get('GEMINI_MODEL') || ''
+  const list = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  return list.length > 0 ? list : DEFAULT_MODELS
+}
 
-  if (!res.ok) {
-    const raw = await res.text()
-    // Log Gemini's own reason so it appears in the function logs.
-    console.error('gemini_error', res.status, raw.slice(0, 500))
-    let providerMessage = ''
-    try {
-      providerMessage = (JSON.parse(raw) as { error?: { message?: string } }).error?.message ?? ''
-    } catch {
-      providerMessage = raw.slice(0, 200)
+interface GeminiResult {
+  json: unknown
+  model: string
+  inputTokens: number
+  outputTokens: number
+}
+
+/**
+ * Calls the model with retries.
+ *   - Timeouts, network errors, malformed output and 5xx responses are retried on the same model.
+ *   - Quota (429), unavailable model (404) and rejected requests (400, 403) move on to the next model.
+ * Throws the last error if every model fails.
+ */
+async function callGemini(apiKey: string, prompt: string, responseSchema: unknown): Promise<GeminiResult> {
+  let lastError: unknown = new Error('AI_PROVIDER_ERROR:no-model')
+
+  for (const model of modelList()) {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_MODEL; attempt++) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json', responseSchema, temperature: 0.4 },
+          }),
+          signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
+        })
+
+        if (res.ok) {
+          const body = (await res.json()) as {
+            candidates?: { content?: { parts?: { text?: string }[] } }[]
+            usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number }
+          }
+          const text = body.candidates?.[0]?.content?.parts?.[0]?.text
+          if (!text) throw new Error('AI_BAD_OUTPUT: empty response')
+          return {
+            json: JSON.parse(text),
+            model,
+            inputTokens: body.usageMetadata?.promptTokenCount ?? 0,
+            outputTokens: body.usageMetadata?.candidatesTokenCount ?? 0,
+          }
+        }
+
+        const raw = await res.text()
+        console.error('gemini_error', model, res.status, raw.slice(0, 500))
+        let providerMessage = ''
+        try {
+          providerMessage = (JSON.parse(raw) as { error?: { message?: string } }).error?.message ?? ''
+        } catch {
+          providerMessage = raw.slice(0, 200)
+        }
+        lastError = new ProviderError(res.status, providerMessage.slice(0, 300))
+
+        if (res.status < 500) break // not worth retrying this model: try the next one
+        if (attempt < MAX_ATTEMPTS_PER_MODEL) await sleep(1500 * attempt)
+      } catch (error) {
+        lastError = error
+        console.error('gemini_attempt_failed', model, attempt, (error as Error).name, (error as Error).message)
+        if (attempt < MAX_ATTEMPTS_PER_MODEL) await sleep(1500 * attempt)
+      }
     }
-    throw new ProviderError(res.status, providerMessage.slice(0, 300))
   }
 
-  const body = (await res.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[]
-    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number }
-  }
-  const text = body.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) throw new Error('AI_BAD_OUTPUT')
-  return {
-    text,
-    inputTokens: body.usageMetadata?.promptTokenCount ?? 0,
-    outputTokens: body.usageMetadata?.candidatesTokenCount ?? 0,
-  }
+  throw lastError
 }
 
 /** Stores one validated question as a draft through the caller's session. */
@@ -185,7 +218,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!apiKey) {
     return reply(req, 503, { code: 'AI_NOT_CONFIGURED', message: 'AI generation is not configured on the server yet.' })
   }
-  const model = Deno.env.get('GEMINI_MODEL') || DEFAULT_MODEL
 
   // 3. Topic name for the prompt.
   const topic = await client.from('topics').select('name').eq('id', request.topic_id).maybeSingle()
@@ -203,20 +235,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const jobId = begin.data as string
 
-  const finish = async (
-    outcome: 'SUCCEEDED' | 'FAILED',
-    produced: number,
-    tokens: { input: number; output: number },
-    error?: { code: string; message: string },
-  ) => {
+  let model = modelList()[0]!
+  const usage = { input: 0, output: 0 }
+
+  const finish = async (outcome: 'SUCCEEDED' | 'FAILED', produced: number, error?: { code: string; message: string }) => {
     await client.rpc('admin_ai_finish', {
       p_job: jobId,
       p_status: outcome,
       p_produced: produced,
       p_provider: 'gemini',
       p_model: model,
-      p_input_tokens: tokens.input,
-      p_output_tokens: tokens.output,
+      p_input_tokens: usage.input,
+      p_output_tokens: usage.output,
       p_error_code: error?.code ?? null,
       p_error_message: error?.message ?? null,
     })
@@ -225,24 +255,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
   try {
     // 5. Generate.
     const prompt = buildGenerationPrompt(request, topic.data.name as string)
-    const gen = await callGemini(apiKey, model, prompt, geminiGenerationResponseSchema)
-    const usage = { input: gen.inputTokens, output: gen.outputTokens }
+    const gen = await callGemini(apiKey, prompt, geminiGenerationResponseSchema)
+    model = gen.model
+    usage.input += gen.inputTokens
+    usage.output += gen.outputTokens
 
-    let json: unknown
-    try {
-      json = JSON.parse(gen.text)
-    } catch {
-      await finish('FAILED', 0, usage, { code: 'AI_BAD_OUTPUT', message: 'The model returned malformed output.' })
-      return reply(req, 502, { code: 'AI_BAD_OUTPUT', message: 'The model returned something unreadable. Try again.' })
-    }
-
-    // 6. Validate every question.
-    const batch = generatedBatchSchema.safeParse(json)
+    // 6. Validate every question. Anything that does not match the schema is dropped, not repaired.
+    const batch = generatedBatchSchema.safeParse(gen.json)
     const candidates = batch.success ? batch.data.questions.slice(0, request.count) : []
     const warnings: string[] = []
     if (!batch.success) warnings.push('Some model output did not match the expected format and was discarded.')
 
-    // 7. Store drafts.
+    // 7. Store drafts. A rejected question is reported, and the rest still go through.
     const saved: { question_id: string; question_version_id: string; q: GeneratedQuestion }[] = []
     for (const q of candidates) {
       try {
@@ -254,16 +278,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // 8. Second pass: solve WITHOUT the key.
+    // 8. Second pass: solve WITHOUT the key. Agreement is recorded as PASS, disagreement as WARN.
+    //    A failure here never discards the drafts.
     if (saved.length > 0) {
       try {
-        const solverPrompt = buildSolverPrompt(
-          saved.map((s, i) => ({ index: i, stem: s.q.stem, options: s.q.options })),
-        )
-        const solved = await callGemini(apiKey, model, solverPrompt, geminiSolverResponseSchema)
+        const solverPrompt = buildSolverPrompt(saved.map((s, i) => ({ index: i, stem: s.q.stem, options: s.q.options })))
+        const solved = await callGemini(apiKey, solverPrompt, geminiSolverResponseSchema)
         usage.input += solved.inputTokens
         usage.output += solved.outputTokens
-        const answers = solverAnswersSchema.safeParse(JSON.parse(solved.text))
+        const answers = solverAnswersSchema.safeParse(solved.json)
         for (let i = 0; i < saved.length; i++) {
           const s = saved[i]!
           const said = answers.success ? answers.data.answers.find((a) => a.index === i)?.answer_index : undefined
@@ -281,7 +304,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           })
         }
       } catch (error) {
-        console.error('solver_pass_failed', error)
+        console.error('solver_pass_failed', (error as Error).name, (error as Error).message)
         warnings.push('The second-pass check did not complete. Review these drafts carefully.')
         for (const s of saved) {
           await client.rpc('admin_record_solver_check', {
@@ -294,35 +317,39 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const produced = saved.length
-    await finish(
-      produced > 0 ? 'SUCCEEDED' : 'FAILED',
-      produced,
-      usage,
-      produced > 0 ? undefined : { code: 'AI_NO_VALID_OUTPUT', message: 'No question passed validation.' },
-    )
-    return reply(req, produced > 0 ? 200 : 502, {
+    if (produced === 0) {
+      await finish('FAILED', 0, { code: 'AI_NO_VALID_OUTPUT', message: 'No question passed validation.' })
+      return reply(req, 502, {
+        code: 'AI_NO_VALID_OUTPUT',
+        message: 'No usable questions were produced. Try a more specific request.',
+      })
+    }
+
+    await finish('SUCCEEDED', produced)
+    return reply(req, 200, {
       job_id: jobId,
       produced,
       question_ids: saved.map((s) => s.question_id),
       warnings,
-      ...(produced > 0 ? {} : { code: 'AI_NO_VALID_OUTPUT', message: 'No usable questions were produced. Try a more specific request.' }),
     })
   } catch (error) {
-    console.error('generate_failed', error)
-    const err = error as { message?: string; providerQuota?: boolean; status?: number; providerMessage?: string }
+    console.error('generate_failed', (error as Error).name, (error as Error).message)
 
-    if (err.message === 'AI_QUOTA' || err.providerQuota || (error instanceof ProviderError && error.status === 429)) {
-      await finish('FAILED', 0, { input: 0, output: 0 }, { code: 'AI_PROVIDER_QUOTA', message: 'Provider quota exhausted.' })
+    if (error instanceof ProviderError && error.status === 429) {
+      await finish('FAILED', 0, { code: 'AI_PROVIDER_QUOTA', message: 'Provider quota exhausted.' })
       return reply(req, 429, { code: 'AI_QUOTA', message: 'The AI provider is busy or its quota is used up. Try again later.' })
     }
 
-    // Show Gemini's own reason, so the cause is visible. It contains no secrets.
-    const reason =
-      error instanceof ProviderError
-        ? `Gemini returned ${error.status}${error.providerMessage ? `: ${error.providerMessage}` : ''}`
-        : (err.message ?? 'Unknown error').slice(0, 300)
+    let reason: string
+    if (error instanceof ProviderError) {
+      reason = `Gemini returned ${error.status}${error.providerMessage ? `: ${error.providerMessage}` : ''}`
+    } else if ((error as Error).name === 'TimeoutError') {
+      reason = 'The model took too long to answer. Try again with fewer questions.'
+    } else {
+      reason = ((error as Error).message ?? 'Unknown error').slice(0, 300)
+    }
 
-    await finish('FAILED', 0, { input: 0, output: 0 }, { code: 'AI_PROVIDER_ERROR', message: reason })
+    await finish('FAILED', 0, { code: 'AI_PROVIDER_ERROR', message: reason })
     return reply(req, 502, { code: 'AI_PROVIDER_ERROR', message: reason })
   }
 })
