@@ -1,4 +1,4 @@
-import { expect } from 'vitest'
+﻿import { expect } from 'vitest'
 
 /** The statement must be rejected because the role lacks a grant. */
 export async function expectPermissionDenied(promise: Promise<unknown>): Promise<void> {
@@ -17,5 +17,6 @@ export const TABLES = [
   'question_validation_results', 'challenge_attempts', 'attempt_answers', 'attempt_scores',
   'bookmarks', 'feedback_reports',
   // Phase 2
-  'challenge_registrations', 'attempt_questions',
+  'challenge_registrations', 'attempt_questions', 'question_translations', 'question_option_translations',
 ] as const
+

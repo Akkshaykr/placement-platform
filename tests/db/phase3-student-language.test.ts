@@ -7,6 +7,11 @@ import { MIN, administrator, approvedQuestion, publishedChallenge, seedTopic, st
 const TA_STEM = '\u0BA4\u0BAE\u0BBF\u0BB4\u0BCD \u0BB5\u0BBF\u0BA9\u0BBE?'
 const taOption = (i: number) => `\u0BB5\u0BBF\u0B9F\u0BC8 ${i + 1}`
 
+type AttemptView = {
+  language: string
+  questions: { stem: string; options: { id: string; body: string }[] }[]
+}
+
 describe('student language choice', () => {
   let db: PGlite
   let admin: string
@@ -18,8 +23,8 @@ describe('student language choice', () => {
     as(db, asUser(userId), async () => {
       const r =
         language === undefined
-          ? await db.query<{ r: any }>(`select public.student_start_attempt($1) as r`, [challengeId])
-          : await db.query<{ r: any }>(`select public.student_start_attempt($1, $2) as r`, [challengeId, language])
+          ? await db.query<{ r: AttemptView }>(`select public.student_start_attempt($1) as r`, [challengeId])
+          : await db.query<{ r: AttemptView }>(`select public.student_start_attempt($1, $2) as r`, [challengeId, language])
       return r.rows[0]!.r
     })
 
@@ -42,7 +47,7 @@ describe('student language choice', () => {
   it('starts in English by default, with the one-argument call', async () => {
     const attempt = await start(await student(db))
     expect(attempt.language).toBe('en')
-    expect(attempt.questions[0].stem).toBe('Student language probe question?')
+    expect(attempt.questions[0]!.stem).toBe('Student language probe question?')
   })
 
   it('refuses Tamil while the challenge offers English only', async () => {
@@ -69,9 +74,9 @@ describe('student language choice', () => {
     }
     const attempt = await start(await student(db), 'ta')
     expect(attempt.language).toBe('ta')
-    const question = attempt.questions[0]
+    const question = attempt.questions[0]!
     expect(question.stem).toBe(TA_STEM)
-    expect([...question.options.map((o: any) => o.id)].sort()).toEqual([...optionIds].sort())
+    expect([...question.options.map((o) => o.id)].sort()).toEqual([...optionIds].sort())
     for (const o of question.options) {
       expect(o.body).toMatch(/^\u0BB5\u0BBF\u0B9F\u0BC8 \d$/)
     }
@@ -80,6 +85,6 @@ describe('student language choice', () => {
   it('keeps English for English attempts even after Tamil is available', async () => {
     const attempt = await start(await student(db), 'en')
     expect(attempt.language).toBe('en')
-    expect(attempt.questions[0].stem).toBe('Student language probe question?')
+    expect(attempt.questions[0]!.stem).toBe('Student language probe question?')
   })
 })

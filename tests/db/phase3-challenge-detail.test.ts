@@ -12,7 +12,7 @@ describe('challenge detail languages', () => {
   const detail = async () => {
     const user = await student(db)
     return as(db, asUser(user), async () =>
-      (await db.query<{ r: any }>(`select public.student_challenge_detail('detail-language') as r`)).rows[0]!.r,
+      (await db.query<{ r: { languages: string[]; tamil_ready: boolean } }>(`select public.student_challenge_detail('detail-language') as r`)).rows[0]!.r,
     )
   }
 
